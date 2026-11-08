@@ -1,0 +1,18 @@
+{
+  "name": "Kociakowe skakanie",
+  "short_name": "Kociaki",
+  "description": "Gra dla 1–4 graczy: kotki skaczą przez mapę pełną kolców i pił. Kto pierwszy zdobędzie 8 punktów, wygrywa.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2b2d5c",
+  "theme_color": "#2b2d5c",
+  "categories": ["games", "kids"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -4,11 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#2b2d5c">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Kociakowe skakanie">
   <title>Kociakowe skakanie</title>
+  <meta name="description" content="Gra dla 1–4 graczy: kotki skaczą przez mapę pełną kolców i pił.">
+  <meta name="application-name" content="Kociakowe skakanie">
+  <meta name="apple-mobile-web-app-title" content="Kociaki">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,6 +37,7 @@
 
       <div id="playerList" class="player-list"></div>
 
+      <button id="resumeSavedBtn" class="big-btn resume-btn" hidden>Kontynuuj grę ▶<small id="resumeSavedInfo"></small></button>
       <button id="startBtn" class="big-btn">Graj! 🐾</button>
 
       <details class="howto">
@@ -73,6 +79,28 @@
     </div>
   </div>
 
+  <!-- aplikacja na telefon: instalacja i aktualizacja -->
+  <div class="app-banner" id="install-banner" hidden>
+    <img src="icons/icon-192.png" alt="" width="40" height="40">
+    <div class="app-banner-text">
+      <strong>Zainstaluj Kociakowe skakanie</strong>
+      <span class="only-prompt">Gra na ekranie głównym, działa też bez internetu.</span>
+      <span class="only-ios">Stuknij <b>Udostępnij</b> <svg class="share-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>, potem <b>Do ekranu początkowego</b>.</span>
+    </div>
+    <button class="btn primary only-prompt" id="btn-install">Zainstaluj</button>
+    <button class="banner-close" id="btn-install-close" aria-label="Nie pokazuj więcej">✕</button>
+  </div>
+  <div class="app-banner" id="update-banner" role="alert" hidden>
+    <div class="app-banner-text">
+      <strong>Dostępna nowa wersja</strong>
+      <span>Wyniki i level zostaną zachowane.</span>
+    </div>
+    <button class="btn primary" id="btn-update">Odśwież</button>
+    <button class="btn" id="btn-update-later">Później</button>
+  </div>
+  <div id="safeProbe" aria-hidden="true"></div>
+
   <script src="game.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

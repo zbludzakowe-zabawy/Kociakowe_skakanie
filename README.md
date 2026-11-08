@@ -7,8 +7,42 @@ kto pierwszy zbierze **8 punktów**, wygrywa całą grę.
 
 ## Jak uruchomić
 
-To zwykła strona HTML bez żadnych zależności – wystarczy otworzyć `index.html` w przeglądarce
-albo wystawić folder przez dowolny serwer (np. GitHub Pages).
+Zagraj na stronie: **https://zbludzakowe-zabawy.github.io/Kociakowe_skakanie/**
+
+To zwykła strona HTML bez żadnych zależności – można też otworzyć `index.html` w przeglądarce.
+Gra publikuje się sama na GitHub Pages po każdej zmianie na `main`
+(jednorazowo: Settings → Pages → Source: **GitHub Actions**).
+
+## Aplikacja na telefon
+
+Grę można zainstalować jak aplikację – ma wtedy własną ikonę na ekranie głównym, otwiera się
+na pełnym ekranie i **działa bez internetu**.
+
+- **Android (Chrome, Edge, Samsung):** w menu gry pojawi się baner **Zainstaluj** – albo
+  ⋮ → **Zainstaluj aplikację** / **Dodaj do ekranu głównego**.
+- **iPhone / iPad:** otwórz stronę w **Safari**, stuknij **Udostępnij** → **Do ekranu początkowego**
+  (gra sama to podpowie).
+- **Komputer (Chrome, Edge):** ikona instalacji na pasku adresu albo przycisk **Zainstaluj** w banerze.
+
+Gra **zapamiętuje rozgrywkę**: liczbę graczy, wyniki i level. Jeśli telefon zamknie aplikację w tle
+albo przeładujesz stronę, w menu pojawi się **Kontynuuj grę** (bieżący level zaczyna się od nowa
+z odliczaniem). Po przeładowaniu w trakcie gry rozgrywka wraca od razu.
+
+Gdy opublikujemy nową wersję, zainstalowana gra pokaże **„Dostępna nowa wersja”**.
+**Odśwież** wczytuje ją od razu (wyniki i level zostają), **Później** – przy następnym uruchomieniu.
+Gra nigdy nie przeładowuje się sama w trakcie zabawy.
+
+## Struktura
+
+| Plik | Co to |
+|------|-------|
+| `index.html`, `style.css`, `game.js` | gra |
+| `manifest.webmanifest` | opis aplikacji (nazwa, kolory, ikony) |
+| `icons/` | ikony aplikacji; źródło: `tools/icon/ikona.svg` |
+| `sw.js` | service worker – działanie offline i aktualizacje |
+| `js/pwa.js` | baner „Zainstaluj” i „Dostępna nowa wersja” |
+| `tools/build-sw.mjs` | przy publikacji wpisuje do `sw.js` wersję i listę plików |
+| `.github/workflows/pages.yml` | publikacja na GitHub Pages |
 
 ## Gracze i sterowanie
 

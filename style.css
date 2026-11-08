@@ -193,3 +193,57 @@ button { font-family: inherit; }
   .mid-btn { font-size: 16px; padding: 6px 18px; }
   #winnerCat { width: 110px; height: 77px; }
 }
+
+/* przycisk „Kontynuuj grę” w menu */
+.resume-btn { background: #ffd35a; }
+.resume-btn small { display: block; font-size: 13px; font-weight: normal; margin-top: 2px; }
+[hidden] { display: none !important; }
+
+/* sonda do odczytu bezpiecznego marginesu (notch, pasek stanu) */
+#safeProbe {
+  position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* ---------- aplikacja: instalacja i aktualizacja ---------- */
+.app-banner {
+  position: fixed; left: 0; right: 0; margin: 0 auto;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 150000;
+  display: flex; align-items: center; gap: 10px;
+  width: min(520px, calc(100vw - 24px));
+  padding: 10px 12px; border-radius: 18px;
+  background: #fff8ee; border: 4px solid #2b2d5c;
+  box-shadow: 0 5px 0 #2b2d5c;
+  color: #2b2d5c;
+  animation: rise .25s ease;
+  touch-action: manipulation;
+}
+.app-banner[hidden] { display: none; }
+.app-banner img { border-radius: 10px; flex: none; }
+.app-banner-text { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: .85rem; color: #5a5c8a; min-width: 0; }
+.app-banner-text strong { color: #2b2d5c; font-size: .95rem; }
+.app-banner .btn {
+  flex: none; padding: 8px 14px; border: 3px solid #2b2d5c; border-radius: 12px;
+  background: #fff; color: #2b2d5c; font-weight: bold; font-size: 15px; cursor: pointer;
+}
+.app-banner .btn.primary { background: #1fd1c1; }
+.banner-close {
+  flex: none; width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid #2b2d5c; background: transparent; color: #2b2d5c; cursor: pointer;
+}
+.share-ico { width: 1.1em; height: 1.1em; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#install-banner .only-prompt, #install-banner .only-ios { display: none; }
+#install-banner[data-mode="prompt"] .only-prompt { display: inline; }
+#install-banner[data-mode="prompt"] button.only-prompt { display: inline-block; }
+#install-banner[data-mode="ios"] .only-ios { display: inline; }
+/* w trakcie gry baner instalacji nie przeszkadza – pokazuje się tylko w menu */
+body.playing #install-banner { display: none; }
+
+@keyframes rise { from { transform: translateY(20px); opacity: 0; } }
+@media (max-width: 720px) {
+  .app-banner { gap: 8px; }
+  .app-banner .btn { padding: 8px 10px; }
+}
+/* gdy baner jest widoczny, menu da się przewinąć ponad niego */
+body:has(.app-banner:not([hidden])) .overlay { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
