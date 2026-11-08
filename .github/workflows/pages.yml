@@ -25,7 +25,8 @@ jobs:
       - name: Przygotuj pliki strony
         run: |
           mkdir -p _site
-          cp index.html style.css game.js _site/
+          cp -r index.html style.css game.js js icons manifest.webmanifest sw.js _site/
+          node tools/build-sw.mjs _site
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

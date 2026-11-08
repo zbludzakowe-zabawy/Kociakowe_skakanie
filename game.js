@@ -39,11 +39,13 @@
   const pauseBtn = $('pauseBtn');
   const muteBtn = $('muteBtn');
 
-  let W = 0, Hs = 0, DPR = 1;
+  let W = 0, Hs = 0, DPR = 1, safeTop = 0;
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2.5);
     W = window.innerWidth;
     Hs = window.innerHeight;
+    const probe = $('safeProbe');
+    safeTop = probe ? parseFloat(getComputedStyle(probe).paddingTop) || 0 : 0;
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(Hs * DPR);
   }
@@ -202,6 +204,69 @@
   let cam = { x: 0, scale: 1 };
   const pressFlash = [0, 0, 0, 0];
 
+  // ---------------------------------------------------------------------------
+  // Zapis stanu: telefon może zamknąć aplikację w tle, a „Odśwież” przeładowuje
+  // stronę – zapamiętujemy liczbę graczy, wyniki i level, od którego grać dalej.
+  // ---------------------------------------------------------------------------
+  const SAVE_KEY = 'kociakowe-skakanie-gra';
+  const RESUME_KEY = 'kociakowe-skakanie-wznow';
+  const inMatch = () => state === 'countdown' || state === 'play' || state === 'celebrate';
+
+  function saveGame() {
+    if (!inMatch()) return;
+    const data = {
+      numPlayers,
+      scores: scores.slice(0, 4),
+      // po dobiegnięciu do mety gramy dalej od następnego levelu
+      levelNo: state === 'celebrate' ? levelNo + 1 : levelNo,
+    };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { /* trudno */ }
+  }
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* trudno */ }
+  }
+  function loadSave() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!d || !(d.numPlayers >= 1 && d.numPlayers <= 4) || !(d.levelNo >= 1) || !Array.isArray(d.scores)) return null;
+      const sc = [0, 1, 2, 3].map((i) => clamp(Math.floor(Number(d.scores[i]) || 0), 0, WIN_POINTS - 1));
+      return { numPlayers: d.numPlayers, levelNo: Math.floor(d.levelNo), scores: sc };
+    } catch (e) { return null; }
+  }
+  function onLeave() {
+    saveGame();
+    try {
+      if (inMatch()) sessionStorage.setItem(RESUME_KEY, '1');
+      else sessionStorage.removeItem(RESUME_KEY);
+    } catch (e) { /* trudno */ }
+  }
+  window.addEventListener('pagehide', onLeave);
+
+  function resumeSaved(d) {
+    numPlayers = d.numPlayers;
+    scores = d.scores.slice();
+    levelWinner = -1;
+    paused = false;
+    loadLevel(d.levelNo);
+    startCountdown();
+    showOnly(null);
+    pauseBtn.classList.remove('hidden');
+    setPlaying(true);
+  }
+
+  function updateResumeBtn() {
+    const d = loadSave();
+    const btn = $('resumeSavedBtn');
+    btn.hidden = !d;
+    if (d) {
+      const pts = d.scores.slice(0, d.numPlayers).join(' : ');
+      $('resumeSavedInfo').textContent =
+        `Level ${d.levelNo} · ${d.numPlayers} ${d.numPlayers === 1 ? 'gracz' : 'graczy'} · wynik ${pts}`;
+    }
+  }
+
+  function setPlaying(on) { document.body.classList.toggle('playing', on); }
+
   function newCat(id) {
     return {
       id,
@@ -232,6 +297,7 @@
     state = 'countdown';
     countT = 3 * COUNT_STEP;
     lastCount = -1;
+    saveGame();
   }
 
   function startGame(n) {
@@ -243,6 +309,7 @@
     startCountdown();
     showOnly(null);
     pauseBtn.classList.remove('hidden');
+    setPlaying(true);
   }
 
   function showOnly(el) {
@@ -250,11 +317,14 @@
   }
 
   function goMenu() {
+    saveGame();
     state = 'menu';
     paused = false;
     showOnly(menuEl);
     pauseBtn.classList.add('hidden');
+    setPlaying(false);
     renderPlayerList();
+    updateResumeBtn();
   }
 
   // ---------------------------------------------------------------------------
@@ -311,6 +381,7 @@
     canvas.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
   window.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('visibilitychange', () => {
+    if (document.hidden) onLeave();
     if (document.hidden && !paused && (state === 'play' || state === 'countdown' || state === 'celebrate')) togglePause();
   });
 
@@ -331,8 +402,14 @@
     paused = false;
     showOnly(null);
     pauseBtn.classList.remove('hidden');
+    setPlaying(true);
     loadLevel(levelNo + 1);
     startCountdown();
+  });
+  $('resumeSavedBtn').addEventListener('click', () => {
+    ensureAudio();
+    const d = loadSave();
+    if (d) resumeSaved(d);
   });
 
   // ---------------------------------------------------------------------------
@@ -460,6 +537,7 @@
     state = 'celebrate';
     celebrateT = CELEBRATE_TIME;
     sfx.win();
+    if (scores[c.id] < WIN_POINTS) saveGame(); else clearSave();
     for (let i = 0; i < 70; i++) {
       particles.push({
         screen: true,
@@ -524,7 +602,9 @@
 
   function endGame(winner) {
     state = 'gameover';
+    clearSave();
     pauseBtn.classList.add('hidden');
+    setPlaying(false);
     sfx.bigWin();
     const p = PLAYERS[winner];
     $('winnerText').innerHTML = `<span style="color:${p.dark}">${p.name} kotek</span> wygrywa grę! 🏆`;
@@ -1014,7 +1094,7 @@
     const scoreW = (small ? 46 : 54) * numPlayers;
     const totalW = lvlW + scoreW + 12;
     const x0 = W / 2 - totalW / 2;
-    const y0 = 8;
+    const y0 = 8 + safeTop;
     g.fillStyle = 'rgba(255,248,238,0.95)';
     g.strokeStyle = '#2b2d5c';
     g.lineWidth = 3;
@@ -1144,6 +1224,14 @@
   cats = [];
   cam.x = -100;
   renderPlayerList();
+  updateResumeBtn();
+  // po „Odśwież” (nowa wersja) albo przeładowaniu w trakcie gry – wracamy od razu do rozgrywki
+  try {
+    const again = sessionStorage.getItem(RESUME_KEY) === '1';
+    sessionStorage.removeItem(RESUME_KEY);
+    const d = again && loadSave();
+    if (d) resumeSaved(d);
+  } catch (e) { /* trudno */ }
   requestAnimationFrame(frame);
 
   // drobne API do testów

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2b2d5c"/>
+  <!-- ślad skoku -->
+  <path d="M70 400 Q 170 230 270 330" fill="none" stroke="#ffd35a" stroke-width="18" stroke-linecap="round" stroke-dasharray="4 34"/>
+  <!-- głowa kotka -->
+  <g stroke="#14163a" stroke-width="14" stroke-linejoin="round">
+    <path d="M158 236 L170 96 L262 168 Z" fill="#1fd1c1"/>
+    <path d="M354 236 L342 96 L250 168 Z" fill="#1fd1c1"/>
+    <circle cx="256" cy="268" r="132" fill="#1fd1c1"/>
+  </g>
+  <path d="M184 180 L188 128 L226 160 Z" fill="#ffc2dc"/>
+  <path d="M328 180 L324 128 L286 160 Z" fill="#ffc2dc"/>
+  <ellipse cx="208" cy="262" rx="20" ry="28" fill="#14163a"/>
+  <ellipse cx="304" cy="262" rx="20" ry="28" fill="#14163a"/>
+  <circle cx="214" cy="252" r="7" fill="#fff"/>
+  <circle cx="310" cy="252" r="7" fill="#fff"/>
+  <path d="M242 300 L270 300 L256 316 Z" fill="#ff6f9f"/>
+  <path d="M256 316 Q 244 336 228 328 M256 316 Q 268 336 284 328" fill="none" stroke="#14163a" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="200" cy="320" rx="22" ry="12" fill="#ff8fc4"/>
+  <ellipse cx="312" cy="320" rx="22" ry="12" fill="#ff8fc4"/>
+</svg>
