@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2b2d5c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kociakowe skakanie">
+  <title>Kociakowe skakanie</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <button id="pauseBtn" class="hud-btn hidden" aria-label="Pauza">❚❚</button>
+
+  <!-- MENU -->
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <h1>Kociakowe skakanie</h1>
+      <p class="subtitle">Przeskacz kotkiem od startu do mety! Kto pierwszy zdobędzie <b>8 punktów</b>, wygrywa.</p>
+
+      <h2>Ilu graczy?</h2>
+      <div id="playerCount" class="count-row">
+        <button data-n="1">1</button>
+        <button data-n="2" class="selected">2</button>
+        <button data-n="3">3</button>
+        <button data-n="4">4</button>
+      </div>
+
+      <div id="playerList" class="player-list"></div>
+
+      <button id="startBtn" class="big-btn">Graj! 🐾</button>
+
+      <details class="howto">
+        <summary>Jak grać?</summary>
+        <ul>
+          <li>Kotki biegną same od lewej do prawej.</li>
+          <li><b>Telefon:</b> klikaj szybko w swoją łapkę w rogu ekranu, żeby kotek podskakiwał.</li>
+          <li><b>Komputer:</b> wciskaj szybko swój klawisz: <kbd>Q</kbd> <kbd>Z</kbd> <kbd>P</kbd> <kbd>M</kbd>.</li>
+          <li>Jeśli nie klikasz, kotek spada na podłogę.</li>
+          <li>Uważaj na <b>kolce</b> na suficie i podłodze oraz na kręcące się <b>piły</b> – po zderzeniu kotek stoi przez sekundę.</li>
+          <li>Kto pierwszy dobiegnie do mety, dostaje punkt. Potem odliczanie 3‑2‑1‑0 i kolejny level – coraz dłuższy i trudniejszy!</li>
+        </ul>
+      </details>
+
+      <p class="rotate-hint">📱↻ Obróć telefon poziomo, żeby grało się wygodniej.</p>
+      <button id="muteBtn" class="small-btn">🔊 Dźwięk: wł.</button>
+    </div>
+  </div>
+
+  <!-- PAUSE -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel small">
+      <h2>Pauza</h2>
+      <button id="resumeBtn" class="big-btn">Graj dalej ▶</button>
+      <button id="restartBtn" class="mid-btn">Zacznij od nowa</button>
+      <button id="toMenuBtn" class="mid-btn">Menu</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover" class="overlay hidden">
+    <div class="panel small">
+      <canvas id="winnerCat" width="200" height="140"></canvas>
+      <h2 id="winnerText">Wygrana!</h2>
+      <div id="finalScores" class="final-scores"></div>
+      <button id="continueBtn" class="big-btn">Kolejne levele ▶</button>
+      <button id="newGameBtn" class="mid-btn">Zacznij od nowa</button>
+      <button id="endBtn" class="mid-btn">Zakończ</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
