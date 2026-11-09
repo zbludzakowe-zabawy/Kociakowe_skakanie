@@ -196,7 +196,7 @@
     // dekoracje tła
     const deco = [];
     for (let i = 0; i < length / 260; i++) {
-      deco.push({ x: i * 260 + range(0, 140), kind: Math.floor(range(0, 3)), y: range(60, H - 120) });
+      deco.push({ x: i * 260 + range(0, 140), kind: Math.floor(range(0, 5)), y: range(60, H - 120) });
     }
     return { n, length, speed, spikes, saws, deco, items: placeItems(n, players, length, gaps) };
   }
@@ -1095,7 +1095,29 @@
     g.fillStyle = 'rgba(255,255,255,0.35)';
     for (let x = off - stripe * 2; x < W + stripe; x += stripe * 2) g.fillRect(x, top, stripe, H * s);
 
-    // dekoracje: okna, kłębki wełny, rybki
+    // szlaczek pod sufitem: falbanka z serduszkami (przesuwa się razem z tapetą)
+    const fw = 40 * s;
+    const fy = top + 8 * s;
+    const foff = -((cam.x * s * 0.5) % fw);
+    g.fillStyle = '#ffb3d1';
+    g.beginPath();
+    g.moveTo(foff - fw, top);
+    for (let x = foff - fw; x < W + fw; x += fw) {
+      g.lineTo(x, fy);
+      g.quadraticCurveTo(x + fw / 2, fy + 14 * s, x + fw, fy);
+    }
+    g.lineTo(W + fw, top);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#ff7eb9';
+    for (let x = foff - fw; x < W + fw; x += fw) drawHeart(g, x + fw / 2, fy + 3 * s, 4 * s);
+    g.strokeStyle = 'rgba(255,126,185,0.5)';
+    g.lineWidth = Math.max(1, 1.5 * s);
+    g.setLineDash([4 * s, 5 * s]);
+    g.beginPath(); g.moveTo(0, fy + 22 * s); g.lineTo(W, fy + 22 * s); g.stroke();
+    g.setLineDash([]);
+
+    // dekoracje: okna, kłębki wełny, zegary, obrazki z łapką, kwiatki na półce
     for (const d of level ? level.deco : []) {
       const dx = (d.x - cam.x * 0.5) * s;
       if (dx < -100 * s || dx > W + 100 * s) continue;
@@ -1116,10 +1138,53 @@
         g.strokeStyle = '#e06a9e'; g.lineWidth = 2 * s;
         g.beginPath(); g.arc(dx, dy + 40 * s, 12 * s, 0.3, 2.5); g.stroke();
         g.beginPath(); g.arc(dx, dy + 40 * s, 6 * s, 3.5, 5.5); g.stroke();
+      } else if (d.kind === 2) {
+        // zegar ścienny – wskazówki naprawdę się kręcą
+        const cx = dx + 25 * s, cy = dy + 30 * s, r = 22 * s;
+        g.fillStyle = '#fff8ee';
+        g.strokeStyle = '#c99a6b';
+        g.lineWidth = 5 * s;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = '#c99a6b';
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          g.beginPath(); g.arc(cx + Math.cos(a) * r * 0.78, cy + Math.sin(a) * r * 0.78, 1.4 * s, 0, Math.PI * 2); g.fill();
+        }
+        const tt = time + d.x * 0.01;
+        g.strokeStyle = '#2b2d5c';
+        g.lineCap = 'round';
+        g.lineWidth = 3 * s;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(tt * 0.1 - 1.6) * r * 0.45, cy + Math.sin(tt * 0.1 - 1.6) * r * 0.45); g.stroke();
+        g.lineWidth = 2 * s;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(tt * 1.2 - 1.6) * r * 0.7, cy + Math.sin(tt * 1.2 - 1.6) * r * 0.7); g.stroke();
+      } else if (d.kind === 3) {
+        // obrazek w ramce z kocią łapką
+        g.fillStyle = '#ffd35a';
+        g.fillRect(dx - 4 * s, dy - 4 * s, 58 * s, 68 * s);
+        g.fillStyle = '#c3f0ea';
+        g.fillRect(dx, dy, 50 * s, 60 * s);
+        g.strokeStyle = '#c99a6b';
+        g.lineWidth = 3 * s;
+        g.beginPath(); g.moveTo(dx + 10 * s, dy - 4 * s); g.lineTo(dx + 25 * s, dy - 16 * s); g.lineTo(dx + 40 * s, dy - 4 * s); g.stroke();
+        drawPaw(g, dx + 25 * s, dy + 33 * s, 18 * s, '#a66bff');
       } else {
-        g.fillStyle = '#7fd6ff';
-        g.beginPath(); g.ellipse(dx, dy + 30 * s, 18 * s, 9 * s, 0, 0, Math.PI * 2); g.fill();
-        g.beginPath(); g.moveTo(dx - 16 * s, dy + 30 * s); g.lineTo(dx - 28 * s, dy + 20 * s); g.lineTo(dx - 28 * s, dy + 40 * s); g.fill();
+        // półka z kwiatkiem w doniczce
+        g.fillStyle = '#c99a6b';
+        g.fillRect(dx - 10 * s, dy + 50 * s, 70 * s, 6 * s);
+        g.fillStyle = '#4caf6e';
+        g.beginPath(); g.ellipse(dx + 15 * s, dy + 22 * s, 6 * s, 11 * s, -0.5, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(dx + 35 * s, dy + 22 * s, 6 * s, 11 * s, 0.5, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#ff7eb9';
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * Math.PI * 2;
+          g.beginPath(); g.arc(dx + 25 * s + Math.cos(a) * 7 * s, dy + 8 * s + Math.sin(a) * 7 * s, 5 * s, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = '#ffd35a';
+        g.beginPath(); g.arc(dx + 25 * s, dy + 8 * s, 4.5 * s, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#e0784a';
+        g.beginPath();
+        g.moveTo(dx + 12 * s, dy + 30 * s); g.lineTo(dx + 38 * s, dy + 30 * s);
+        g.lineTo(dx + 34 * s, dy + 50 * s); g.lineTo(dx + 16 * s, dy + 50 * s); g.closePath(); g.fill();
       }
       g.restore();
     }
@@ -1286,6 +1351,14 @@
       g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
     g.closePath(); g.fill(); g.stroke();
+  }
+
+  function drawHeart(g, x, y, r) {
+    g.beginPath();
+    g.moveTo(x, y + r);
+    g.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.6, y - r * 1.4, x, y - r * 0.4);
+    g.bezierCurveTo(x + r * 0.6, y - r * 1.4, x + r * 1.6, y - r * 0.2, x, y + r);
+    g.fill();
   }
 
   function drawPaw(g, x, y, r, color) {
