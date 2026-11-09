@@ -68,5 +68,12 @@ Gra nigdy nie przeładowuje się sama w trakcie zabawy.
   startują w kolejnym levelu.
 - Z każdym levelem mapa jest dłuższa, kotki szybsze, a przeszkód więcej: od 3. levelu piły jeżdżą
   góra‑dół, od 4. pojawiają się „bramki” z dwóch pił, od 6. tunele z kolcami.
+- Na mapie są znajdźki (każdą może zebrać tylko jeden kotek – kto pierwszy, ten lepszy):
+  - **Myszki** 🐭 (od 2. levelu) – małe, szare. Kotek, który złapie myszkę, przez **3 sekundy**
+    biegnie trochę szybciej.
+  - **Rybki** 🐟 (od 4. levelu) – na każdym levelu jest ich o jedną więcej niż graczy. Dają tarczę
+    (bańka wokół kotka): **raz** można dotknąć kolców albo piły i nic się nie dzieje.
+  - **Ser** 🧀 (od 6. levelu) – pułapka! Jeśli kotek zje go, gdy jeszcze działa myszka, przez
+    **4 sekundy** biegnie wolniej niż na samym początku gry. Bez myszki ser nic nie robi i zostaje na mapie.
 - Po zdobyciu 8 punktów można grać **kolejne levele** (nowa rozgrywka do 8 punktów od
   następnego, trudniejszego levelu), **zacząć od nowa** albo **zakończyć**.
