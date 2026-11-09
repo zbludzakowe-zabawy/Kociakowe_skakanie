@@ -19,6 +19,16 @@
   const CELEBRATE_TIME = 1.6;
   const START_X = 80;
 
+  // Znajdźki na mapie
+  const MOUSE_FROM = 2;     // myszy od 2. levelu
+  const FISH_FROM = 4;      // ryby od 4. levelu
+  const CHEESE_FROM = 6;    // sery od 6. levelu
+  const MOUSE_BOOST = 1.18; // mysz: kotek biegnie trochę szybciej…
+  const MOUSE_TIME = 3;     // …przez 3 sekundy
+  const SLOW_SPEED = 170;   // ser po myszy: wolniej niż na 1. levelu (215)…
+  const SLOW_TIME = 4;      // …przez 4 sekundy
+  const ITEM_R = { mouse: 8, fish: 10, cheese: 10 };
+
   const PLAYERS = [
     { name: 'Turkusowy', color: '#1fd1c1', dark: '#0d8a80', key: 'q', corner: 'tl', cornerName: 'lewy górny róg' },
     { name: 'Różowy',    color: '#ff7eb9', dark: '#c9437f', key: 'z', corner: 'bl', cornerName: 'lewy dolny róg' },
@@ -85,6 +95,10 @@
     count: () => tone(660, 0.15, 'square', 0.05),
     go: () => tone(990, 0.35, 'square', 0.06, 1320),
     win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.07, 0, i * 0.11)),
+    mouse: () => { tone(1200, 0.06, 'square', 0.04, 1600); tone(1500, 0.08, 'square', 0.04, 2000, 0.06); },
+    fish: () => [784, 988, 1318].forEach((f, i) => tone(f, 0.12, 'triangle', 0.06, 0, i * 0.07)),
+    cheese: () => tone(500, 0.4, 'sawtooth', 0.05, 160),
+    shield: () => { tone(1500, 0.15, 'triangle', 0.06, 700); tone(300, 0.12, 'sine', 0.05, 600); },
     bigWin: () => [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => tone(f, 0.22, 'triangle', 0.07, 0, i * 0.13)),
   };
   function updateMuteBtn() { muteBtn.textContent = muted ? '🔇 Dźwięk: wył.' : '🔊 Dźwięk: wł.'; }
@@ -109,7 +123,7 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  function makeLevel(n) {
+  function makeLevel(n, players = 1) {
     const rnd = mulberry32(n * 7919 + 1234);
     const range = (a, b) => a + rnd() * (b - a);
     const d = clamp((n - 1) / 9, 0, 1);          // trudność 0..1
@@ -133,6 +147,7 @@
     const stripW = () => range(80, 140 + d * 240);
 
     let x = 520;
+    const gaps = [];  // wolne miejsca między przeszkodami – tam stawiamy znajdźki
     while (x < length - 380) {
       const type = pick();
       let w = 0;
@@ -173,15 +188,58 @@
           break;
         }
       }
-      x += w + range(lerp(330, 180, d), lerp(560, 330, d));
+      const space = range(lerp(330, 180, d), lerp(560, 330, d));
+      gaps.push({ a: x + w, b: x + w + space });
+      x += w + space;
     }
 
     // dekoracje tła
     const deco = [];
     for (let i = 0; i < length / 260; i++) {
-      deco.push({ x: i * 260 + range(0, 140), kind: Math.floor(range(0, 3)), y: range(60, H - 120) });
+      deco.push({ x: i * 260 + range(0, 140), kind: Math.floor(range(0, 5)), y: range(60, H - 120) });
     }
-    return { n, length, speed, spikes, saws, deco };
+    return { n, length, speed, spikes, saws, deco, items: placeItems(n, players, length, gaps) };
+  }
+
+  // Myszy, ryby i sery rozrzucone po całej mapie. Osobny generator liczb,
+  // żeby przeszkody wyglądały tak samo jak wcześniej.
+  function placeItems(n, players, length, gaps) {
+    const rnd = mulberry32(n * 104729 + 77);
+    const range = (a, b) => a + rnd() * (b - a);
+    const kinds = [];
+    if (n >= MOUSE_FROM) for (let i = 0; i < 3 + Math.floor((n - MOUSE_FROM) / 2); i++) kinds.push('mouse');
+    if (n >= FISH_FROM) for (let i = 0; i < players + 1; i++) kinds.push('fish');
+    if (n >= CHEESE_FROM) for (let i = 0; i < 2 + Math.floor((n - CHEESE_FROM) / 3); i++) kinds.push('cheese');
+    if (!kinds.length) return [];
+    // przemieszaj rodzaje, żeby każdy był w innej części mapy
+    for (let i = kinds.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+    }
+    const usable = gaps.filter((g) => g.b - g.a >= 120);
+    if (!usable.length) usable.push({ a: 400, b: length - 200 });
+    const used = new Array(usable.length).fill(0);
+    const items = [];
+    const T = kinds.length;
+    const first = usable[0].a, lastB = usable[usable.length - 1].b;
+    kinds.forEach((kind, i) => {
+      // miejsce docelowe: równo rozłożone od początku do końca mapy
+      const want = lerp(first, lastB, (i + 0.5) / T);
+      let best = 0, bestScore = Infinity;
+      usable.forEach((g, gi) => {
+        const score = Math.abs((g.a + g.b) / 2 - want) + used[gi] * 100000;
+        if (score < bestScore) { bestScore = score; best = gi; }
+      });
+      const g = usable[best];
+      const k = used[best]++;
+      const margin = 50;
+      const span = Math.max(0, g.b - g.a - margin * 2);
+      // jeśli w jednej przerwie jest kilka znajdziek, stoją obok siebie
+      const ix = g.a + margin + (k === 0 ? range(0.25, 0.75) : (k % 2 ? 0.1 : 0.9)) * span;
+      const iy = range(70, H - 50);
+      items.push({ kind, x: ix, y: iy, r: ITEM_R[kind], taken: false, bob: range(0, 6.28) });
+    });
+    return items;
   }
 
   // ---------------------------------------------------------------------------
@@ -201,6 +259,7 @@
   let celebrateT = 0;
   let levelWinner = -1;
   let particles = [];
+  let floaters = [];     // napisy nad kotkami („Szybciej!” itp.)
   let cam = { x: 0, scale: 1 };
   const pressFlash = [0, 0, 0, 0];
 
@@ -278,16 +337,22 @@
       onGround: false,
       finished: false,
       run: Math.random() * 6,
+      boost: 0,      // mysz: pozostały czas przyspieszenia
+      slow: 0,       // ser po myszy: pozostały czas spowolnienia
+      shields: 0,    // ryby: ile razy można dotknąć kolców / piły
+      shieldPass: 0, // trwa przechodzenie przez przeszkodę dzięki rybie
+      shieldClear: 0,
     };
   }
 
   function loadLevel(n) {
     levelNo = n;
-    level = makeLevel(n);
+    level = makeLevel(n, numPlayers);
     cats = [];
     for (let i = 0; i < numPlayers; i++) cats.push(newCat(i));
     time = 0;
     particles = particles.filter((p) => p.screen);
+    floaters = [];
     const s = baseScale();
     cam.scale = s;
     cam.x = START_X - (W / s) * 0.3;
@@ -484,6 +549,46 @@
     return false;
   }
 
+  function catSpeed(c, lead) {
+    if (c.slow > 0) return SLOW_SPEED; // po serze nie ma doganiania
+    // kto zostaje w tyle, ten trochę przyspiesza i dogania innych
+    const gap = lead - c.x;
+    const catchUp = gap > 30 ? 1 + Math.min(0.35, gap / 900) : 1;
+    return level.speed * catchUp * (c.boost > 0 ? MOUSE_BOOST : 1);
+  }
+
+  function floatText(c, text, color) {
+    floaters.push({ x: c.x, y: c.y - 34, text, color, life: 1.2, max: 1.2 });
+  }
+
+  function collectItems(c) {
+    for (const it of level.items) {
+      if (it.taken) continue;
+      if (Math.hypot(c.x - it.x, c.y - it.y) > CAT_R + it.r) continue;
+      if (it.kind === 'mouse') {
+        it.taken = true;
+        c.boost = MOUSE_TIME;
+        sfx.mouse();
+        floatText(c, 'Szybciej!', '#1fd1c1');
+        burst(it.x, it.y, '#b9b9c9', 8, 140);
+      } else if (it.kind === 'fish') {
+        it.taken = true;
+        c.shields++;
+        sfx.fish();
+        floatText(c, 'Tarcza!', '#3aa7ff');
+        burst(it.x, it.y, '#7fd6ff', 10, 160);
+      } else if (it.kind === 'cheese' && c.boost > 0) {
+        // ser działa tylko zaraz po myszy – inaczej zostaje na mapie
+        it.taken = true;
+        c.boost = 0;
+        c.slow = SLOW_TIME;
+        sfx.cheese();
+        floatText(c, 'Wolniej…', '#e0a100');
+        burst(it.x, it.y, '#ffd35a', 10, 140);
+      }
+    }
+  }
+
   function leaderX() {
     let m = -Infinity;
     for (const c of cats) m = Math.max(m, c.x);
@@ -498,6 +603,8 @@
       if (c.y >= H - CAT_R) { c.vy = 0; c.onGround = true; }
       return;
     }
+    if (c.boost > 0) c.boost = Math.max(0, c.boost - dt);
+    if (c.slow > 0) c.slow = Math.max(0, c.slow - dt);
     if (c.stun > 0) {
       c.stun -= dt;
       if (c.stun <= 0) { c.stun = 0; c.invuln = INVULN_TIME; }
@@ -505,10 +612,7 @@
     }
     if (c.invuln > 0) c.invuln -= dt;
 
-    // kto zostaje w tyle, ten trochę przyspiesza i dogania innych
-    const gap = lead - c.x;
-    const catchUp = gap > 30 ? 1 + Math.min(0.35, gap / 900) : 1;
-    c.x += level.speed * catchUp * dt;
+    c.x += catSpeed(c, lead) * dt;
 
     c.vy = Math.min(c.vy + GRAVITY * dt, MAX_FALL);
     c.y += c.vy * dt;
@@ -516,7 +620,21 @@
     if (c.y > H - CAT_R) { c.y = H - CAT_R; c.vy = 0; c.onGround = true; }
     if (c.y < CAT_R) { c.y = CAT_R; if (c.vy < 0) c.vy = 0; }
 
-    if (c.invuln <= 0 && hitsObstacle(c)) {
+    collectItems(c);
+
+    if (c.shieldPass > 0) {
+      // ryba chroni, dopóki kotek nie wyjdzie z przeszkody, którą dotknął
+      c.shieldPass -= dt;
+      c.shieldClear = hitsObstacle(c) ? 0 : c.shieldClear + dt;
+      if (c.shieldClear > 0.12 || c.shieldPass <= 0) c.shieldPass = 0;
+    } else if (c.invuln <= 0 && c.shields > 0 && hitsObstacle(c)) {
+      c.shields--;
+      c.shieldPass = 2.5;
+      c.shieldClear = 0;
+      sfx.shield();
+      floatText(c, 'Uff!', '#3aa7ff');
+      burst(c.x, c.y, '#7fd6ff', 14, 200);
+    } else if (c.invuln <= 0 && hitsObstacle(c)) {
       c.stun = STUN_TIME;
       c.vy = 0;
       sfx.hit();
@@ -567,6 +685,8 @@
       p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
     }
     particles = particles.filter((p) => p.life > 0);
+    for (const f of floaters) { f.life -= dt; f.y -= 30 * dt; }
+    floaters = floaters.filter((f) => f.life > 0);
     if (goFlash > 0) goFlash -= dt;
 
     if (state === 'menu' || paused || !level) { updateCamera(dt, true); return; }
@@ -830,6 +950,90 @@
     g.restore();
   }
 
+  // Mała szara mysz (dużo mniejsza od kotka)
+  function drawMouse(g, x, y, s, t) {
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.strokeStyle = '#2b2d5c';
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    // ogonek
+    g.lineWidth = 1.3;
+    g.beginPath(); g.moveTo(-6, 2); g.quadraticCurveTo(-12, 2 + Math.sin(t * 6) * 3, -14, -3); g.stroke();
+    // łapki
+    g.fillStyle = '#ff9ec7';
+    const st = Math.sin(t * 14) * 1.5;
+    g.beginPath(); g.ellipse(-3 + st, 4.6, 1.6, 1.1, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(3 - st, 4.6, 1.6, 1.1, 0, 0, Math.PI * 2); g.fill();
+    // ciałko
+    g.fillStyle = '#a7a9bf';
+    g.lineWidth = 1.2;
+    g.beginPath(); g.ellipse(0, 0, 7, 4.8, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    // główka z uszkiem
+    g.beginPath(); g.ellipse(6, -1.5, 3.8, 3, -0.3, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.arc(4.5, -4.8, 2.4, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = '#ffc2dc';
+    g.beginPath(); g.arc(4.5, -4.8, 1.3, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2b2d5c';
+    g.beginPath(); g.arc(7, -2.2, 0.8, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ff6f9f';
+    g.beginPath(); g.arc(9.8, -0.8, 0.9, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  function drawFish(g, x, y, s, t) {
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.rotate(Math.sin(t * 3) * 0.12);
+    // poświata – ryba daje tarczę
+    g.fillStyle = 'rgba(127,214,255,0.35)';
+    g.beginPath(); g.arc(0, 0, 15 + Math.sin(t * 4) * 1.5, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2b2d5c';
+    g.lineWidth = 1.3;
+    g.lineJoin = 'round';
+    g.fillStyle = '#ff9f43';
+    g.beginPath(); g.moveTo(-6, 0); g.lineTo(-13, -6); g.lineTo(-13, 6); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#ffb86b';
+    g.beginPath(); g.ellipse(1, 0, 9, 5.5, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(43,45,92,0.5)';
+    g.beginPath(); g.arc(-1, 0, 4, -1, 1); g.stroke();
+    g.fillStyle = '#2b2d5c';
+    g.beginPath(); g.arc(6, -1.2, 1.1, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  function drawCheese(g, x, y, s, t) {
+    g.save();
+    g.translate(x, y + Math.sin(t * 2.5) * 1.5 * s);
+    g.scale(s, s);
+    g.strokeStyle = '#2b2d5c';
+    g.lineWidth = 1.3;
+    g.lineJoin = 'round';
+    g.fillStyle = '#ffd35a';
+    g.beginPath(); g.moveTo(-10, 6); g.lineTo(10, 6); g.lineTo(10, -2); g.lineTo(-10, -7); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#ffe58f';
+    g.beginPath(); g.moveTo(-10, -7); g.lineTo(10, -2); g.lineTo(6, -6); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#e0a100';
+    for (const [hx, hy, hr] of [[-5, 1, 1.8], [2, 3, 1.4], [5, -0.5, 1.2], [-1, -1.5, 1]]) {
+      g.beginPath(); g.arc(hx, hy, hr, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  }
+
+  function drawItems(g, top, s) {
+    for (const it of level.items) {
+      if (it.taken) continue;
+      const x = (it.x - cam.x) * s;
+      if (x < -30 * s || x > W + 30 * s) continue;
+      const t = time + it.bob;
+      const y = top + it.y * s;
+      if (it.kind === 'mouse') drawMouse(g, x, y, s * 1.25, t);
+      else if (it.kind === 'fish') drawFish(g, x, y + Math.sin(t * 2) * 2 * s, s * 1.1, t);
+      else drawCheese(g, x, y, s * 1.1, t);
+    }
+  }
+
   function drawFinish(g, top, s) {
     const fx = (level.length - cam.x) * s;
     if (fx < -60 * s || fx > W + 60 * s) return;
@@ -891,7 +1095,29 @@
     g.fillStyle = 'rgba(255,255,255,0.35)';
     for (let x = off - stripe * 2; x < W + stripe; x += stripe * 2) g.fillRect(x, top, stripe, H * s);
 
-    // dekoracje: okna, kłębki wełny, rybki
+    // szlaczek pod sufitem: falbanka z serduszkami (przesuwa się razem z tapetą)
+    const fw = 40 * s;
+    const fy = top + 8 * s;
+    const foff = -((cam.x * s * 0.5) % fw);
+    g.fillStyle = '#ffb3d1';
+    g.beginPath();
+    g.moveTo(foff - fw, top);
+    for (let x = foff - fw; x < W + fw; x += fw) {
+      g.lineTo(x, fy);
+      g.quadraticCurveTo(x + fw / 2, fy + 14 * s, x + fw, fy);
+    }
+    g.lineTo(W + fw, top);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#ff7eb9';
+    for (let x = foff - fw; x < W + fw; x += fw) drawHeart(g, x + fw / 2, fy + 3 * s, 4 * s);
+    g.strokeStyle = 'rgba(255,126,185,0.5)';
+    g.lineWidth = Math.max(1, 1.5 * s);
+    g.setLineDash([4 * s, 5 * s]);
+    g.beginPath(); g.moveTo(0, fy + 22 * s); g.lineTo(W, fy + 22 * s); g.stroke();
+    g.setLineDash([]);
+
+    // dekoracje: okna, kłębki wełny, zegary, obrazki z łapką, kwiatki na półce
     for (const d of level ? level.deco : []) {
       const dx = (d.x - cam.x * 0.5) * s;
       if (dx < -100 * s || dx > W + 100 * s) continue;
@@ -912,10 +1138,53 @@
         g.strokeStyle = '#e06a9e'; g.lineWidth = 2 * s;
         g.beginPath(); g.arc(dx, dy + 40 * s, 12 * s, 0.3, 2.5); g.stroke();
         g.beginPath(); g.arc(dx, dy + 40 * s, 6 * s, 3.5, 5.5); g.stroke();
+      } else if (d.kind === 2) {
+        // zegar ścienny – wskazówki naprawdę się kręcą
+        const cx = dx + 25 * s, cy = dy + 30 * s, r = 22 * s;
+        g.fillStyle = '#fff8ee';
+        g.strokeStyle = '#c99a6b';
+        g.lineWidth = 5 * s;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = '#c99a6b';
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          g.beginPath(); g.arc(cx + Math.cos(a) * r * 0.78, cy + Math.sin(a) * r * 0.78, 1.4 * s, 0, Math.PI * 2); g.fill();
+        }
+        const tt = time + d.x * 0.01;
+        g.strokeStyle = '#2b2d5c';
+        g.lineCap = 'round';
+        g.lineWidth = 3 * s;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(tt * 0.1 - 1.6) * r * 0.45, cy + Math.sin(tt * 0.1 - 1.6) * r * 0.45); g.stroke();
+        g.lineWidth = 2 * s;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(tt * 1.2 - 1.6) * r * 0.7, cy + Math.sin(tt * 1.2 - 1.6) * r * 0.7); g.stroke();
+      } else if (d.kind === 3) {
+        // obrazek w ramce z kocią łapką
+        g.fillStyle = '#ffd35a';
+        g.fillRect(dx - 4 * s, dy - 4 * s, 58 * s, 68 * s);
+        g.fillStyle = '#c3f0ea';
+        g.fillRect(dx, dy, 50 * s, 60 * s);
+        g.strokeStyle = '#c99a6b';
+        g.lineWidth = 3 * s;
+        g.beginPath(); g.moveTo(dx + 10 * s, dy - 4 * s); g.lineTo(dx + 25 * s, dy - 16 * s); g.lineTo(dx + 40 * s, dy - 4 * s); g.stroke();
+        drawPaw(g, dx + 25 * s, dy + 33 * s, 18 * s, '#a66bff');
       } else {
-        g.fillStyle = '#7fd6ff';
-        g.beginPath(); g.ellipse(dx, dy + 30 * s, 18 * s, 9 * s, 0, 0, Math.PI * 2); g.fill();
-        g.beginPath(); g.moveTo(dx - 16 * s, dy + 30 * s); g.lineTo(dx - 28 * s, dy + 20 * s); g.lineTo(dx - 28 * s, dy + 40 * s); g.fill();
+        // półka z kwiatkiem w doniczce
+        g.fillStyle = '#c99a6b';
+        g.fillRect(dx - 10 * s, dy + 50 * s, 70 * s, 6 * s);
+        g.fillStyle = '#4caf6e';
+        g.beginPath(); g.ellipse(dx + 15 * s, dy + 22 * s, 6 * s, 11 * s, -0.5, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(dx + 35 * s, dy + 22 * s, 6 * s, 11 * s, 0.5, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#ff7eb9';
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * Math.PI * 2;
+          g.beginPath(); g.arc(dx + 25 * s + Math.cos(a) * 7 * s, dy + 8 * s + Math.sin(a) * 7 * s, 5 * s, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = '#ffd35a';
+        g.beginPath(); g.arc(dx + 25 * s, dy + 8 * s, 4.5 * s, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#e0784a';
+        g.beginPath();
+        g.moveTo(dx + 12 * s, dy + 30 * s); g.lineTo(dx + 38 * s, dy + 30 * s);
+        g.lineTo(dx + 34 * s, dy + 50 * s); g.lineTo(dx + 16 * s, dy + 50 * s); g.closePath(); g.fill();
       }
       g.restore();
     }
@@ -948,6 +1217,7 @@
     if (!level) return;
     for (const sp of level.spikes) drawSpikes(g, sp, top, s);
     for (const sw of level.saws) drawSaw(g, sw, top, s);
+    drawItems(g, top, s);
 
     // kotki (ostatni gracz na spodzie)
     for (let i = cats.length - 1; i >= 0; i--) {
@@ -957,6 +1227,19 @@
       if (sx < -40 * s || sx > W + 40 * s) continue;
       if (c.invuln > 0 && Math.floor(c.invuln * 12) % 2 === 0) continue; // miganie
       const tilt = c.stun > 0 ? Math.sin(time * 30) * 0.15 : clamp(c.vy / 1400, -0.35, 0.45);
+      if (c.boost > 0 && !c.finished) {
+        // smugi pędu po zjedzeniu myszy
+        g.strokeStyle = 'rgba(255,255,255,0.9)';
+        g.lineWidth = Math.max(1, 2.5 * s);
+        g.lineCap = 'round';
+        g.beginPath();
+        for (let k = 0; k < 3; k++) {
+          const ly = sy + (k - 1) * 7 * s;
+          const ox = ((time * 90 + k * 13) % 14) * s;
+          g.moveTo(sx - (22 + ox) * s, ly); g.lineTo(sx - (34 + ox) * s, ly);
+        }
+        g.stroke();
+      }
       g.save();
       if (c.stun > 0) g.globalAlpha = 0.85;
       drawCat(g, sx, sy - 2 * s, c.id, {
@@ -964,6 +1247,36 @@
         dizzy: c.stun > 0, happy: c.finished,
       });
       g.restore();
+      if (c.shields > 0 || c.shieldPass > 0) {
+        // bańka-tarcza od ryby
+        g.save();
+        g.globalAlpha = c.shieldPass > 0 ? 0.35 + 0.35 * Math.abs(Math.sin(time * 20)) : 0.55;
+        g.strokeStyle = '#3aa7ff';
+        g.fillStyle = 'rgba(127,214,255,0.18)';
+        g.lineWidth = Math.max(1.5, 2.5 * s);
+        g.beginPath(); g.arc(sx + 2 * s, sy - 4 * s, 26 * s, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.restore();
+        if (c.shields > 1) {
+          g.fillStyle = '#3aa7ff';
+          g.font = `bold ${Math.max(9, Math.round(10 * s))}px Trebuchet MS, sans-serif`;
+          g.textAlign = 'left';
+          g.textBaseline = 'middle';
+          g.fillText(`×${c.shields}`, sx + 24 * s, sy - 22 * s);
+        }
+      }
+      if (c.slow > 0 && !c.finished) {
+        // po serze: senne „z” nad głową
+        g.fillStyle = '#e0a100';
+        g.font = `bold ${Math.max(9, Math.round(11 * s))}px Trebuchet MS, sans-serif`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        for (let k = 0; k < 2; k++) {
+          const ph = (time * 0.9 + k * 0.5) % 1;
+          g.globalAlpha = 1 - ph;
+          g.fillText('z', sx - 14 * s - ph * 8 * s, sy - (28 + ph * 18) * s);
+        }
+        g.globalAlpha = 1;
+      }
       if (c.stun > 0) {
         // gwiazdki nad głową
         for (let k = 0; k < 3; k++) {
@@ -977,6 +1290,22 @@
       g.textAlign = 'center';
       g.textBaseline = 'bottom';
       g.fillText(`${c.id + 1}`, sx + 2 * s, sy - 30 * s);
+    }
+
+    // napisy po zebraniu znajdźki
+    for (const f of floaters) {
+      g.save();
+      g.globalAlpha = clamp(f.life / 0.4, 0, 1);
+      g.font = `bold ${Math.max(11, Math.round(14 * s))}px Trebuchet MS, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineWidth = 3;
+      g.lineJoin = 'round';
+      g.strokeStyle = '#fff';
+      g.strokeText(f.text, (f.x - cam.x) * s, top + f.y * s);
+      g.fillStyle = f.color;
+      g.fillText(f.text, (f.x - cam.x) * s, top + f.y * s);
+      g.restore();
     }
 
     // cząsteczki w świecie
@@ -1022,6 +1351,14 @@
       g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
     g.closePath(); g.fill(); g.stroke();
+  }
+
+  function drawHeart(g, x, y, r) {
+    g.beginPath();
+    g.moveTo(x, y + r);
+    g.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.6, y - r * 1.4, x, y - r * 0.4);
+    g.bezierCurveTo(x + r * 0.6, y - r * 1.4, x + r * 1.6, y - r * 0.2, x, y + r);
+    g.fill();
   }
 
   function drawPaw(g, x, y, r, color) {
@@ -1240,6 +1577,7 @@
     get scores() { return scores.slice(); },
     get levelNo() { return levelNo; },
     get cats() { return cats; },
-    makeLevel, jump, startGame,
+    get level() { return level; },
+    makeLevel, loadLevel, jump, startGame,
   };
 })();
