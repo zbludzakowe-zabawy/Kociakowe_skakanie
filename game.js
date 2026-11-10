@@ -42,10 +42,10 @@
     p: { key: 'p', corner: 'tr', cornerName: 'prawy górny róg' },
     m: { key: 'm', corner: 'br', cornerName: 'prawy dolny róg' },
   };
-  // Przy dwóch graczach każdy ma swoją stronę ekranu/klawiatury: lewą (Q) i prawą (P).
+  // Przy dwóch graczach gracze są po skosie: lewy górny róg (Q) i prawy dolny róg (M).
   const CONTROL_LAYOUT = {
     1: ['q'],
-    2: ['q', 'p'],
+    2: ['q', 'm'],
     3: ['q', 'z', 'p'],
     4: ['q', 'z', 'p', 'm'],
   };
