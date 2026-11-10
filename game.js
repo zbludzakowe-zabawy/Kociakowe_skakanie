@@ -30,12 +30,30 @@
   const ITEM_R = { mouse: 8, fish: 10, cheese: 10 };
 
   const PLAYERS = [
-    { name: 'Turkusowy', color: '#1fd1c1', dark: '#0d8a80', key: 'q', corner: 'tl', cornerName: 'lewy górny róg' },
-    { name: 'Różowy',    color: '#ff7eb9', dark: '#c9437f', key: 'z', corner: 'bl', cornerName: 'lewy dolny róg' },
-    { name: 'Fioletowy', color: '#a66bff', dark: '#6a35c2', key: 'p', corner: 'tr', cornerName: 'prawy górny róg' },
-    { name: 'Czerwony',  color: '#ff4b4b', dark: '#b51f1f', key: 'm', corner: 'br', cornerName: 'prawy dolny róg' },
+    { name: 'Turkusowy', color: '#1fd1c1', dark: '#0d8a80' },
+    { name: 'Różowy',    color: '#ff7eb9', dark: '#c9437f' },
+    { name: 'Fioletowy', color: '#a66bff', dark: '#6a35c2' },
+    { name: 'Czerwony',  color: '#ff4b4b', dark: '#b51f1f' },
   ];
-  const KEY_TO_PLAYER = { q: 0, z: 1, p: 2, m: 3 };
+  // Sterowanie (klawisz + róg ekranu z łapką)
+  const CONTROLS = {
+    q: { key: 'q', corner: 'tl', cornerName: 'lewy górny róg' },
+    z: { key: 'z', corner: 'bl', cornerName: 'lewy dolny róg' },
+    p: { key: 'p', corner: 'tr', cornerName: 'prawy górny róg' },
+    m: { key: 'm', corner: 'br', cornerName: 'prawy dolny róg' },
+  };
+  // Przy dwóch graczach każdy ma swoją stronę ekranu/klawiatury: lewą (Q) i prawą (P).
+  const CONTROL_LAYOUT = {
+    1: ['q'],
+    2: ['q', 'p'],
+    3: ['q', 'z', 'p'],
+    4: ['q', 'z', 'p', 'm'],
+  };
+  function ctrl(i) { return CONTROLS[(CONTROL_LAYOUT[numPlayers] || CONTROL_LAYOUT[4])[i]]; }
+  function keyToPlayer(k) {
+    const layout = CONTROL_LAYOUT[numPlayers] || CONTROL_LAYOUT[4];
+    return layout.indexOf(k);
+  }
 
   // ---------------------------------------------------------------------------
   // DOM
@@ -416,10 +434,11 @@
       return;
     }
     if (e.key === 'Escape') { togglePause(); return; }
-    if (k in KEY_TO_PLAYER) {
+    const id = keyToPlayer(k);
+    if (id >= 0) {
       e.preventDefault();
       if (e.repeat) return; // trzeba klikać, przytrzymanie nie działa
-      jump(KEY_TO_PLAYER[k]);
+      jump(id);
     }
   });
 
@@ -435,7 +454,7 @@
     const R = cornerRadius() * 1.25;
     let best = -1, bestD = Infinity;
     for (let i = 0; i < numPlayers; i++) {
-      const p = cornerPos(PLAYERS[i].corner);
+      const p = cornerPos(ctrl(i).corner);
       const dd = Math.hypot(e.clientX - p.x, e.clientY - p.y);
       if (dd < R && dd < bestD) { best = i; bestD = dd; }
     }
@@ -504,7 +523,7 @@
       card.appendChild(cv);
       card.insertAdjacentHTML('beforeend',
         `<b style="color:${p.dark}">Gracz ${i + 1}: ${p.name}</b><br>` +
-        `Klawisz <kbd>${p.key.toUpperCase()}</kbd><br><small>${p.cornerName}</small>`);
+        `Klawisz <kbd>${ctrl(i).key.toUpperCase()}</kbd><br><small>${ctrl(i).cornerName}</small>`);
       list.appendChild(card);
     }
   }
@@ -1375,7 +1394,7 @@
     const showKeys = !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     for (let i = 0; i < numPlayers; i++) {
       const p = PLAYERS[i];
-      const c = cornerPos(p.corner);
+      const c = cornerPos(ctrl(i).corner);
       const f = pressFlash[i];
       const rr = R * (1 + f * 0.06);
       g.save();
@@ -1404,7 +1423,7 @@
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.fillStyle = p.dark;
-      const label = showKeys ? `${i + 1} · ${p.key.toUpperCase()}` : `${i + 1}`;
+      const label = showKeys ? `${i + 1} · ${ctrl(i).key.toUpperCase()}` : `${i + 1}`;
       g.fillText(label, c.x + dx * rr * 0.78, c.y + dy * rr * 0.2);
       g.restore();
     }
